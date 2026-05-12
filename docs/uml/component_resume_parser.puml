@@ -1,0 +1,71 @@
+@startuml
+title Resume Parser Service - Component Diagram
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam packageStyle rectangle
+
+package "API Layer" as ApiLayer {
+  [FastAPI App\napp/main.py] as Main
+  [Resumes API\napp/api/resumes.py] as API
+  [Settings\napp/config.py] as Config
+}
+
+package "Core Layer" as CoreLayer {
+  [ResumePipeline\napp/pipeline/resume_pipeline.py] as Pipeline
+  [Extraction\nPDFExtractor + DOCXExtractor] as Extraction
+  [Preprocess and Detection\nCleaner + Layout + Sections + Boundaries] as Detection
+  [Section Parsers\nContact + Summary + Experience + Education\nSkills + Certifications + Languages + Projects] as Parsers
+  [Quality Control\nFallbackManager + QualityChecker] as Quality
+}
+
+package "Persistence Layer" as PersistenceLayer {
+  [ResumeRepository\napp/db/repository.py] as Repo
+  [Database Client\napp/db/client.py] as DBClient
+}
+
+package "Contracts Layer" as ContractsLayer {
+  [ResumeContent\ncontent.py] as ResumeContent
+  [ParseResumeResponse\nresponse.py] as ParseResponse
+  [ContentContractResponse\ncontract.py] as ContractResponse
+}
+
+database "PostgreSQL\npublic.resumes" as PG
+
+Main --> Config : load
+Main --> Pipeline : initialize
+Main --> Repo : initialize
+
+API --> Pipeline : parse file
+API --> Repo : create / update
+API --> ParseResponse : return summary
+API --> ContractResponse : return schema
+
+Pipeline --> Extraction : extract blocks
+Pipeline --> Detection : prepare blocks
+Pipeline --> Parsers : parse sections
+Pipeline --> Quality : validate result
+Pipeline --> ResumeContent : build final JSON
+
+Repo --> DBClient : use pool
+DBClient --> PG : SQL
+Repo --> ResumeContent : store content
+
+Config -[hidden]-> Pipeline
+Extraction -[hidden]down-> Detection
+Detection -[hidden]down-> Parsers
+Parsers -[hidden]down-> Quality
+Repo -[hidden]down-> DBClient
+ParseResponse -[hidden]down-> ContractResponse
+CoreLayer -[hidden]-> PersistenceLayer
+PersistenceLayer -[hidden]-> ContractsLayer
+
+note bottom of CoreLayer
+The core layer contains the full parsing workflow:
+extraction, preprocessing, section detection,
+section parsing, fallback handling, and quality checks.
+end note
+
+@enduml

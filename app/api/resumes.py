@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from app.config import get_settings
 from app.db.repository import ResumeRepository, get_resume_repository
 from app.pipeline.resume_pipeline import ResumePipeline
+from app.schemas.contract import ResumeContentContractResponse, build_resume_content_contract
 from app.schemas.content import ResumeContent
 from app.schemas.response import ParseResumeResponse
 
@@ -21,6 +22,11 @@ ALLOWED_MIME_TYPES = {
 
 def get_resume_pipeline(request: Request) -> ResumePipeline:
     return request.app.state.resume_pipeline
+
+
+@router.get("/resumes/content-contract", response_model=ResumeContentContractResponse)
+async def get_resume_content_contract() -> ResumeContentContractResponse:
+    return build_resume_content_contract()
 
 
 @router.post("/resumes/parse", response_model=ParseResumeResponse, status_code=status.HTTP_201_CREATED)

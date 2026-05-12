@@ -1,0 +1,213 @@
+@startuml
+title Resume Parser Service - Current Architecture
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor Client
+actor Gateway
+database "PostgreSQL\npublic.resumes" as PG
+
+package "Entry Layer" {
+  rectangle "app/main.py\nFastAPI app + lifespan" as Main
+  rectangle "app/config.py\nSettings\nDATABASE_URL\nUSER_ID_HEADER\nPARSER_VERSION" as Config
+  rectangle "app/api/resumes.py\nPOST /resumes/parse" as API
+}
+
+package "Persistence" {
+  rectangle "app/db/client.py\nDatabase\nasyncpg pool lifecycle" as DBClient
+  rectangle "app/db/repository.py\nResumeRepository\ncreate_resume()\nupdate_content()" as Repo
+}
+
+package "Contracts" {
+  rectangle "app/schemas/content.py\nResumeContent\nResumeMeta\nTextBlock\nExtractionResult\nSectionMatch" as ContentSchema
+  rectangle "app/schemas/response.py\nParseResumeResponse" as ResponseSchema
+}
+
+package "Pipeline" {
+  rectangle "app/pipeline/resume_pipeline.py\nResumePipeline.parse()" as Pipeline
+}
+
+package "Extraction" {
+  rectangle "app/extractors/pdf_extractor.py\nPDFExtractor\nPyMuPDF blocks" as PDFExtractor
+  rectangle "app/extractors/docx_extractor.py\nDOCXExtractor\nparagraphs + tables" as DOCXExtractor
+}
+
+package "Preprocess" {
+  rectangle "app/preprocess/cleaner.py\npreprocess_blocks()\ncleanup + split + merge" as Cleaner
+  rectangle "app/preprocess/layout.py\ndetect_layout_and_reorder()\nsingle/two column" as Layout
+}
+
+package "Detection" {
+  rectangle "app/detectors/section_detector.py\ndetect_section_headers()\nRapidFuzz + synonyms" as SectionDetector
+  rectangle "app/detectors/boundaries.py\nbuild_section_map()\nSectionedDocument" as Boundaries
+}
+
+package "Parsers" {
+  rectangle "app/parsers/contact_parser.py\nContactParser" as ContactParser
+  rectangle "app/parsers/summary_parser.py\nSummaryParser" as SummaryParser
+  rectangle "app/parsers/experience_parser.py\nExperienceParser" as ExperienceParser
+  rectangle "app/parsers/education_parser.py\nEducationParser" as EducationParser
+  rectangle "app/parsers/skills_parser.py\nSkillsParser" as SkillsParser
+  rectangle "app/parsers/generic_list_parser.py\nGenericListParser" as GenericListParser
+}
+
+package "Quality and Fallback" {
+  rectangle "app/quality/checker.py\nQualityChecker\nQualityReport" as QualityChecker
+  rectangle "app/quality/fallback.py\nFallbackManager" as FallbackManager
+}
+
+package "Utilities" {
+  rectangle "app/utils/regexes.py\nemail / phone / url / date regexes" as RegexUtils
+  rectangle "app/utils/text.py\ncollapse_whitespace()\nnormalize_bullet_prefix()\nmerge_text()" as TextUtils
+  rectangle "app/utils/fuzzy.py\nbest_fuzzy_match()" as FuzzyUtils
+}
+
+package "Local Tooling" {
+  rectangle "scripts/parse_pdf.py\nCLI parse without DB\nwrites .parsed.md" as ParseScript
+  rectangle "Makefile\nmake parse-pdf FILE=..." as Makefile
+}
+
+package "Tests" {
+  rectangle "tests/test_section_detector.py" as TestSection
+  rectangle "tests/test_experience_parser.py" as TestExperience
+  rectangle "tests/test_quality_checker.py" as TestQuality
+  rectangle "tests/test_preprocess_cleaner.py" as TestCleaner
+}
+
+Client --> Gateway : upload PDF or DOCX
+Gateway --> API : multipart/form-data + trusted user_id header
+
+Main --> Config
+Main --> DBClient : connect()
+Main --> Repo : app.state.resume_repository
+Main --> Pipeline : app.state.resume_pipeline
+
+API --> Config : get_settings()
+API --> Repo : create processing row
+API --> Pipeline : parse(file_bytes, filename, mime_type)
+API ..> ResponseSchema
+API ..> ContentSchema
+
+DBClient --> PG
+Repo --> PG
+Repo ..> ContentSchema
+
+Pipeline ..> ContentSchema
+Pipeline --> PDFExtractor : if filename endswith .pdf
+Pipeline --> DOCXExtractor : if filename endswith .docx
+Pipeline --> Cleaner
+Pipeline --> Layout
+Pipeline --> SectionDetector
+Pipeline --> Boundaries
+Pipeline --> ContactParser
+Pipeline --> SummaryParser
+Pipeline --> ExperienceParser
+Pipeline --> EducationParser
+Pipeline --> SkillsParser
+Pipeline --> GenericListParser : certifications, languages, projects
+Pipeline --> FallbackManager
+Pipeline --> QualityChecker
+
+PDFExtractor ..> ContentSchema
+PDFExtractor --> TextUtils
+DOCXExtractor ..> ContentSchema
+DOCXExtractor --> TextUtils
+
+Cleaner ..> ContentSchema
+Cleaner --> TextUtils
+Cleaner --> RegexUtils
+
+Layout ..> ContentSchema
+
+SectionDetector ..> ContentSchema
+SectionDetector --> FuzzyUtils
+
+Boundaries ..> ContentSchema
+
+ContactParser ..> ContentSchema
+ContactParser --> RegexUtils
+ContactParser --> TextUtils
+
+SummaryParser ..> ContentSchema
+SummaryParser --> TextUtils
+
+ExperienceParser ..> ContentSchema
+ExperienceParser --> RegexUtils
+ExperienceParser --> TextUtils
+
+EducationParser ..> ContentSchema
+EducationParser --> RegexUtils
+
+SkillsParser --> GenericListParser
+GenericListParser ..> ContentSchema
+GenericListParser --> TextUtils
+
+FallbackManager ..> ContentSchema
+FallbackManager --> ContactParser
+FallbackManager --> ExperienceParser
+FallbackManager --> EducationParser
+FallbackManager --> SkillsParser
+FallbackManager --> TextUtils
+
+QualityChecker ..> ContentSchema
+
+ParseScript --> Pipeline
+ParseScript --> ContentSchema
+Makefile --> ParseScript
+
+TestSection --> SectionDetector
+TestExperience --> ExperienceParser
+TestQuality --> QualityChecker
+TestCleaner --> Cleaner
+TestCleaner --> SectionDetector
+
+note right of API
+API responsibilities:
+- validate trusted gateway header
+- validate extension and MIME
+- create DB row early
+- mark empty upload as failed
+- return parse summary
+end note
+
+note right of Pipeline
+Runtime flow inside ResumePipeline:
+1. build processing ResumeContent
+2. extract blocks
+3. preprocess blocks
+4. detect and reorder layout
+5. detect section headers
+6. build section boundaries
+7. parse each logical section
+8. apply fallback heuristics
+9. collect unassigned blocks
+10. run quality checker
+11. finalize meta.parse_status
+end note
+
+note bottom of Cleaner
+Current cleaner handles:
+- repeated header and footer filtering
+- embedded section header splitting
+- inline bullet splitting
+- mixed bullet and job-entry splitting
+- cautious line merge heuristics
+end note
+
+note bottom of FallbackManager
+Secondary deterministic rescue path:
+- reparses weak contact area
+- infers experience, education, skills
+- records warnings in content.meta
+Future extension point for OCR and AI fallback.
+end note
+
+note bottom of PG
+Only the existing table is used.
+All parsing state is stored inside content JSONB:
+meta, parsed sections, warnings, flags, leftovers.
+end note
+
+@enduml

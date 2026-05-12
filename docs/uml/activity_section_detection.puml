@@ -1,0 +1,40 @@
+@startuml
+title Resume Parser Service - Activity Diagram For Section Detection
+
+start
+
+:Receive reordered text blocks;
+:Initialize empty list of section matches;
+
+repeat
+  :Take next text block;
+  :Normalize text\n(trim, lowercase, collapse spaces);
+
+  if (Block looks like short standalone header?) then (yes)
+    :Compare against section dictionary\n(contact, summary, experience,\neducation, skills, certifications,\nlanguages, projects);
+    :Run fuzzy matching for synonyms\nand minor typos;
+
+    if (Best match score above threshold?) then (yes)
+      :Create SectionMatch\n(canonical_name, score, block_order, source_text);
+      :Append match to list;
+    else (no)
+      :Ignore block as non-header;
+    endif
+  else (no)
+    :Ignore block as content text;
+  endif
+
+repeat while (More blocks?) is (yes)
+
+:Sort detected matches by block order;
+
+if (Any headers found?) then (yes)
+  :Build section boundaries\nfrom current header to next header;
+  :Assign blocks to detected sections;
+else (no)
+  :Mark all blocks as unassigned\nfor fallback classification;
+endif
+
+:Return section matches\nand sectioned document;
+stop
+@enduml

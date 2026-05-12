@@ -1,0 +1,98 @@
+@startuml
+title Resume Parser Service - ER Diagram
+
+hide methods
+hide stereotypes
+skinparam shadowing false
+
+entity "resumes" as resumes {
+  * id : UUID
+  --
+  user_id : TEXT
+  content : JSONB
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "ResumeContent" as ResumeContent {
+  * meta
+  * contact
+  * summary
+  * experience[]
+  * education[]
+  * skills
+  * certifications
+  * languages
+  * projects
+  * unassigned_blocks[]
+}
+
+entity "ResumeMeta" as ResumeMeta {
+  original_filename : string?
+  mime_type : string?
+  parser_version : string
+  parse_status : processing|completed|failed
+  parse_error : string?
+  warnings[] : string
+  fallback_used : bool
+  ocr_used : bool
+  partial_parse : bool
+  layout_detected : string?
+  extraction_method : string?
+}
+
+entity "ContactInfo" as ContactInfo {
+  full_name : string?
+  email : string?
+  phone : string?
+  location : string?
+  linkedin : string?
+  github : string?
+  website : string?
+  raw_text : string?
+}
+
+entity "SummarySection" as SummarySection {
+  raw_text : string?
+}
+
+entity "ExperienceEntry" as ExperienceEntry {
+  title : string?
+  company : string?
+  start_date : string?
+  end_date : string?
+  date_range_raw : string?
+  location : string?
+  bullets[] : string
+  description_raw : string?
+  raw_text : string?
+}
+
+entity "EducationEntry" as EducationEntry {
+  institution : string?
+  degree : string?
+  field : string?
+  start_date : string?
+  end_date : string?
+  date_range_raw : string?
+  location : string?
+  raw_text : string?
+}
+
+entity "GenericListSection" as GenericListSection {
+  items[] : string
+  raw_text : string?
+}
+
+resumes ||--|| ResumeContent : stores in content JSONB
+ResumeContent ||--|| ResumeMeta
+ResumeContent ||--|| ContactInfo
+ResumeContent ||--|| SummarySection
+ResumeContent ||--o{ ExperienceEntry
+ResumeContent ||--o{ EducationEntry
+ResumeContent ||--|| GenericListSection : skills
+ResumeContent ||--|| GenericListSection : certifications
+ResumeContent ||--|| GenericListSection : languages
+ResumeContent ||--|| GenericListSection : projects
+
+@enduml

@@ -4,7 +4,7 @@ import json
 from uuid import UUID
 
 import asyncpg
-from fastapi import Request
+from fastapi import HTTPException, Request, status
 
 from app.schemas.content import ResumeContent
 
@@ -37,4 +37,10 @@ class ResumeRepository:
 
 
 def get_resume_repository(request: Request) -> ResumeRepository:
-    return request.app.state.resume_repository
+    repository = request.app.state.resume_repository
+    if repository is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable. Docs and content contract endpoints work, but parsing is disabled.",
+        )
+    return repository

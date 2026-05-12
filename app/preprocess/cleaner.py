@@ -4,14 +4,27 @@ import re
 from collections import Counter, defaultdict
 
 from app.schemas.content import TextBlock
+from app.utils.regexes import extract_date_range
 from app.utils.text import collapse_whitespace, merge_text, normalize_bullet_prefix
 
 PUNCTUATION_END_RE = re.compile(r"[.:;!?]$")
+SECTION_HEADER_RE = re.compile(
+    r"\b(SUMMARY|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|LANGUAGES|PROJECTS|CONTACT)\b",
+)
+LEADING_SECTION_RE = re.compile(
+    r"^\s*(SUMMARY|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|LANGUAGES|PROJECTS|CONTACT)\b(?:\s*[:|])?\s+(.+)$",
+)
+TRAILING_COMPANY_RE = re.compile(
+    r"^(?P<bullet>- .+?)\.\s+(?P<company>[A-Z].*(?:sp\. z o\.o\.|inc|llc|ltd|corp|gmbh|plc))\.?$",
+    re.IGNORECASE,
+)
 
 
 def preprocess_blocks(blocks: list[TextBlock]) -> list[TextBlock]:
-    cleaned = [_clean_block(block) for block in blocks]
-    cleaned = [block for block in cleaned if block.text]
+    cleaned: list[TextBlock] = []
+    for block in blocks:
+        cleaned.extend(_clean_block(block))
+    cleaned = [block for block in cleaned if block.text.strip()]
     cleaned = _deduplicate_consecutive(cleaned)
     cleaned = _remove_repeated_headers_footers(cleaned)
     cleaned = _join_obvious_wraps(cleaned)
@@ -21,17 +34,137 @@ def preprocess_blocks(blocks: list[TextBlock]) -> list[TextBlock]:
     return cleaned
 
 
-def _clean_block(block: TextBlock) -> TextBlock:
+def _clean_block(block: TextBlock) -> list[TextBlock]:
     text = normalize_bullet_prefix(collapse_whitespace(block.text))
-    return TextBlock(
-        text=text,
-        page=block.page,
-        order=block.order,
-        x0=block.x0,
-        y0=block.y0,
-        x1=block.x1,
-        y1=block.y1,
-    )
+    if not text:
+        return []
+
+    fragments = [text]
+    fragments = _split_embedded_section_headers(fragments)
+    fragments = _split_leading_section_headers(fragments)
+    fragments = _split_inline_bullets(fragments)
+    fragments = _split_mixed_bullet_and_entry_lines(fragments)
+    fragments = _split_trailing_company_suffixes(fragments)
+
+    return [
+        TextBlock(
+            text=fragment,
+            page=block.page,
+            order=block.order,
+            x0=block.x0,
+            y0=block.y0,
+            x1=block.x1,
+            y1=block.y1,
+        )
+        for fragment in fragments
+        if fragment
+    ]
+
+
+def _split_embedded_section_headers(fragments: list[str]) -> list[str]:
+    result: list[str] = []
+    for text in fragments:
+        matches = [match for match in SECTION_HEADER_RE.finditer(text) if _is_valid_header_boundary(text, match.start())]
+        if len(matches) <= 1:
+            result.append(text)
+            continue
+
+        split_points = [match.start() for match in matches]
+        split_points.append(len(text))
+        for index, start in enumerate(split_points[:-1]):
+            end = split_points[index + 1]
+            chunk = text[start:end].strip(" -|")
+            if chunk:
+                result.append(chunk)
+    return result
+
+
+def _split_leading_section_headers(fragments: list[str]) -> list[str]:
+    result: list[str] = []
+    for text in fragments:
+        match = LEADING_SECTION_RE.match(text)
+        if not match:
+            result.append(text)
+            continue
+
+        header = match.group(1).upper()
+        body = match.group(2).strip()
+        result.append(header)
+        if body:
+            result.append(body)
+    return result
+
+
+def _split_inline_bullets(fragments: list[str]) -> list[str]:
+    result: list[str] = []
+    for text in fragments:
+        if "•" not in text:
+            result.append(text)
+            continue
+
+        starts_as_bullet = text.startswith("- ")
+        parts = [part.strip(" -") for part in text.split("•") if part.strip(" -")]
+        if len(parts) <= 1:
+            result.append(text)
+            continue
+
+        if starts_as_bullet:
+            result.append(f"- {parts[0]}")
+        else:
+            result.append(parts[0])
+        result.extend(f"- {part}" for part in parts[1:])
+    return result
+
+
+def _split_mixed_bullet_and_entry_lines(fragments: list[str]) -> list[str]:
+    result: list[str] = []
+    for text in fragments:
+        if not text.startswith("- "):
+            result.append(text)
+            continue
+
+        date_range = extract_date_range(text)
+        if not date_range:
+            result.append(text)
+            continue
+
+        date_index = text.find(date_range)
+        sentence_boundary = text.rfind(". ", 0, date_index)
+        if sentence_boundary == -1 or sentence_boundary < 10:
+            result.append(text)
+            continue
+
+        bullet_part = text[: sentence_boundary + 1].strip()
+        entry_part = text[sentence_boundary + 2 :].strip()
+        if bullet_part:
+            result.append(bullet_part)
+        if entry_part:
+            result.append(entry_part)
+    return result
+
+
+def _split_trailing_company_suffixes(fragments: list[str]) -> list[str]:
+    result: list[str] = []
+    for text in fragments:
+        match = TRAILING_COMPANY_RE.match(text)
+        if not match:
+            result.append(text)
+            continue
+
+        bullet_part = match.group("bullet").strip()
+        company_part = match.group("company").strip().rstrip(".")
+        if bullet_part:
+            result.append(f"{bullet_part}.")
+        if company_part:
+            result.append(company_part)
+    return result
+
+
+def _is_valid_header_boundary(text: str, index: int) -> bool:
+    if index == 0:
+        return True
+    previous_char = text[index - 1]
+    return previous_char.isspace() or previous_char in "|-—–/:;"
 
 
 def _deduplicate_consecutive(blocks: list[TextBlock]) -> list[TextBlock]:
@@ -124,6 +257,10 @@ def _should_merge(current: TextBlock, nxt: TextBlock) -> bool:
         return False
     if current.text.startswith("- ") or nxt.text.startswith("- "):
         return False
+    if _is_section_header_line(current.text) or _is_section_header_line(nxt.text):
+        return False
+    if _looks_like_name_line(current.text) and _contains_contact_markers(nxt.text):
+        return False
     if PUNCTUATION_END_RE.search(current.text):
         return False
     if nxt.text.isupper() and len(nxt.text.split()) <= 4:
@@ -133,3 +270,24 @@ def _should_merge(current: TextBlock, nxt: TextBlock) -> bool:
     if current.x0 is not None and nxt.x0 is not None and abs(current.x0 - nxt.x0) > 35:
         return False
     return current.text.endswith("-") or nxt.text[:1].islower() or len(current.text.split()) <= 8
+
+
+def _is_section_header_line(text: str) -> bool:
+    stripped = text.strip(" :|-")
+    return bool(SECTION_HEADER_RE.fullmatch(stripped))
+
+
+def _contains_contact_markers(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker in lowered for marker in ("@", "http", "linkedin", "github", ".com", ".io"))
+
+
+def _looks_like_name_line(text: str) -> bool:
+    words = text.strip().split()
+    if not (2 <= len(words) <= 4):
+        return False
+    if any(char.isdigit() for char in text):
+        return False
+    if any(symbol in text for symbol in ("@", "http", "|", "/", "\\")):
+        return False
+    return all(word[:1].isupper() for word in words if word)

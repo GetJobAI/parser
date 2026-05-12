@@ -1,0 +1,55 @@
+@startuml
+title Resume Parser Service - Activity Diagram For Experience Parsing
+
+start
+
+:Receive blocks of experience section;
+:Merge blocks into section text;
+:Split section into candidate job entries;
+
+repeat
+  :Take next candidate entry;
+  :Extract raw_text for current entry;
+  :Split entry into lines;
+  :Find header lines\n(company/title/date/location area);
+
+  :Search for date range using regex;
+
+  if (Date range found?) then (yes)
+    :Extract start_date,\nend_date,\ndate_range_raw;
+  else (no)
+    :Keep date fields as null;
+  endif
+
+  :Heuristically classify header text into:
+  - company
+  - title
+  - location;
+
+  :Separate bullet lines from plain text lines;
+
+  if (Bullet lines found?) then (yes)
+    :Store bullet items in bullets[];
+  else (no)
+    :Leave bullets[] empty;
+  endif
+
+  if (Non-bullet descriptive text remains?) then (yes)
+    :Store it in description_raw;
+  else (no)
+    :Keep description_raw = null;
+  endif
+
+  :Create ExperienceEntry;
+  :Append entry to experience[];
+
+repeat while (More candidate entries?) is (yes)
+
+if (No reliable entries built?) then (yes)
+  :Return raw entry text only\nor rely on fallback logic later;
+else (no)
+endif
+
+:Return parsed list of ExperienceEntry;
+stop
+@enduml

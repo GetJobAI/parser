@@ -1,0 +1,44 @@
+@startuml
+title Resume Parser Service - Sequence Diagram For POST /resumes/parse
+
+actor Client
+participant "API Gateway" as Gateway
+participant "FastAPI endpoint\nparse_resume()" as API
+participant "ResumeRepository" as Repo
+participant "ResumePipeline" as Pipeline
+participant "PDF/DOCX Extractor" as Extractor
+participant "Cleaner + Layout +\nSection Detector" as Detection
+participant "Section Parsers" as Parsers
+participant "Fallback + Quality" as Quality
+database "PostgreSQL" as PG
+
+Client -> Gateway : upload resume + auth context
+Gateway -> API : multipart/form-data + trusted user_id header
+
+API -> API : validate header, extension, MIME
+API -> Repo : create_resume(processing content)
+Repo -> PG : INSERT INTO resumes
+PG --> Repo : resume_id
+Repo --> API : resume_id
+
+API -> API : read file bytes
+API -> Pipeline : parse(file_bytes, filename, mime_type)
+
+Pipeline -> Extractor : choose PDF or DOCX extractor
+Extractor --> Pipeline : blocks + extraction metadata
+Pipeline -> Detection : preprocess, layout, section detection
+Detection --> Pipeline : sectioned blocks
+Pipeline -> Parsers : parse contact/summary/\nexperience/education/\nskills/certifications/\nlanguages/projects
+Parsers --> Pipeline : structured ResumeContent
+Pipeline -> Quality : apply fallback and quality checks
+Quality --> Pipeline : final content + quality report
+Pipeline --> API : ResumeContent + QualityReport
+
+API -> Repo : update_content(resume_id, content)
+Repo -> PG : UPDATE resumes SET content=...
+PG --> Repo : ok
+Repo --> API : ok
+
+API --> Gateway : resume_id + partial_parse + warnings + major_sections_found
+Gateway --> Client : HTTP 201 response
+@enduml

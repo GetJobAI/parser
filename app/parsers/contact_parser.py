@@ -25,7 +25,7 @@ class ContactParser:
 
 
 def _extract_full_name(lines: list[str]) -> str | None:
-    for line in lines[:4]:
+    for line in lines[:8]:
         words = line.split()
         if not (2 <= len(words) <= 4):
             continue
@@ -40,9 +40,24 @@ def _extract_full_name(lines: list[str]) -> str | None:
 
 def _extract_location(lines: list[str]) -> str | None:
     for line in lines[:6]:
+        for segment in _split_contact_segments(line):
+            if "," in segment and not any(char.isdigit() for char in segment):
+                return segment
+
         lower_line = line.lower()
         if any(marker in lower_line for marker in ("@", "http", "linkedin", "github")):
             continue
         if "," in line and not any(char.isdigit() for char in line):
             return line
     return None
+
+
+def _split_contact_segments(line: str) -> list[str]:
+    separators = ("·", "|")
+    segments = [line]
+    for separator in separators:
+        next_segments: list[str] = []
+        for segment in segments:
+            next_segments.extend(part.strip() for part in segment.split(separator) if part.strip())
+        segments = next_segments
+    return segments

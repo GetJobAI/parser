@@ -4,10 +4,13 @@ from app.detectors.boundaries import SectionedDocument, build_section_map
 from app.detectors.section_detector import detect_section_headers
 from app.extractors.docx_extractor import DOCXExtractor
 from app.extractors.pdf_extractor import PDFExtractor
+from app.parsers.certifications_parser import CertificationsParser
 from app.parsers.contact_parser import ContactParser
 from app.parsers.education_parser import EducationParser
 from app.parsers.experience_parser import ExperienceParser
 from app.parsers.generic_list_parser import GenericListParser
+from app.parsers.languages_parser import LanguagesParser
+from app.parsers.projects_parser import ProjectsParser
 from app.parsers.skills_parser import SkillsParser
 from app.parsers.summary_parser import SummaryParser
 from app.preprocess.cleaner import preprocess_blocks
@@ -27,6 +30,9 @@ class ResumePipeline:
         self._experience_parser = ExperienceParser()
         self._education_parser = EducationParser()
         self._skills_parser = SkillsParser()
+        self._certifications_parser = CertificationsParser()
+        self._languages_parser = LanguagesParser()
+        self._projects_parser = ProjectsParser()
         self._generic_list_parser = GenericListParser()
         self._fallback_manager = FallbackManager()
         self._quality_checker = QualityChecker()
@@ -68,11 +74,11 @@ class ResumePipeline:
             if sectioned.sections.get("skills"):
                 content.skills = self._skills_parser.parse(sectioned.sections["skills"])
             if sectioned.sections.get("certifications"):
-                content.certifications = self._generic_list_parser.parse(sectioned.sections["certifications"])
+                content.certifications = self._certifications_parser.parse(sectioned.sections["certifications"])
             if sectioned.sections.get("languages"):
-                content.languages = self._generic_list_parser.parse(sectioned.sections["languages"])
+                content.languages = self._languages_parser.parse(sectioned.sections["languages"])
             if sectioned.sections.get("projects"):
-                content.projects = self._generic_list_parser.parse(sectioned.sections["projects"])
+                content.projects = self._projects_parser.parse(sectioned.sections["projects"])
 
             content = self._fallback_manager.apply(content, layout_result.blocks)
             content.unassigned_blocks = self._collect_unassigned_blocks(

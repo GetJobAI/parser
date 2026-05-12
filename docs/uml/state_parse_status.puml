@@ -1,0 +1,28 @@
+@startuml
+title Resume Parser Service - State Diagram For parse_status
+
+[*] --> Processing : Resume row created
+
+state Processing {
+  [*] --> WaitingForExtraction
+  WaitingForExtraction --> ParsingBlocks : file bytes loaded
+  ParsingBlocks --> RunningFallback : weak or incomplete parse
+  ParsingBlocks --> RunningQualityChecks : parse completed normally
+  RunningFallback --> RunningQualityChecks : fallback applied
+  RunningQualityChecks --> [*]
+}
+
+Processing --> Completed : parse succeeded
+Processing --> Failed : empty file / unsupported file / runtime exception
+
+Completed : parse_status = "completed"
+Completed : parse_error = null
+Completed : partial_parse = true or false
+
+Failed : parse_status = "failed"
+Failed : parse_error = error message
+Failed : partial_parse = true
+
+Completed --> [*]
+Failed --> [*]
+@enduml

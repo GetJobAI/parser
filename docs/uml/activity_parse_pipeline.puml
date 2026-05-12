@@ -1,0 +1,71 @@
+@startuml
+title Resume Parser Service - Activity Diagram For Parse Pipeline
+
+start
+
+:Receive POST /resumes/parse;
+:Read trusted user_id header;
+
+if (Header present?) then (yes)
+  :Validate file extension and MIME type;
+else (no)
+  :Return HTTP 400\nMissing trusted gateway header;
+  stop
+endif
+
+if (File type supported?) then (yes)
+  :Create resume row in DB\nwith meta.parse_status = processing;
+else (no)
+  :Return HTTP 400\nUnsupported file type;
+  stop
+endif
+
+:Read uploaded file bytes;
+
+if (File empty?) then (yes)
+  :Mark parse_status = failed;
+  :Store parse_error and warning;
+  :Return HTTP 400;
+  stop
+else (no)
+endif
+
+:Choose extractor by extension;
+
+if (PDF?) then (yes)
+  :Extract blocks with PDFExtractor;
+else (DOCX)
+  :Extract blocks with DOCXExtractor;
+endif
+
+:Preprocess blocks;
+:Detect layout and reorder blocks;
+:Detect section headers with fuzzy matching;
+:Build section boundaries;
+:Parse contact section;
+:Parse summary section;
+:Parse experience section;
+:Parse education section;
+:Parse skills section;
+:Parse certifications section;
+:Parse languages section;
+:Parse projects section;
+:Apply fallback manager;
+:Collect unassigned blocks;
+:Run quality checker;
+
+if (Parsing exception?) then (yes)
+  :Set parse_status = failed;
+  :Set parse_error;
+  :Set partial_parse = true;
+  :Return failed content;
+  stop
+else (no)
+  :Set parse_status = completed;
+  :Update warnings and flags;
+  :Save final content to DB;
+  :Return resume_id,\npartial_parse,\nwarnings,\nmajor_sections_found;
+endif
+
+stop
+@enduml

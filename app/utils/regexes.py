@@ -12,9 +12,14 @@ URL_RE = re.compile(
     re.IGNORECASE,
 )
 DATE_TOKEN = (
+    r"(?:"
     r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|"
-    r"Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|"
-    r"\d{1,2}/\d{4}|\d{4})"
+    r"Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}"
+    r"|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|"
+    r"Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    r"|\d{1,2}[./-]\d{4}"
+    r"|\d{4}"
+    r")"
 )
 DATE_RANGE_RE = re.compile(
     rf"\b({DATE_TOKEN})\s*(?:-|–|—|to)\s*(Present|Current|Now|{DATE_TOKEN})\b",
@@ -33,7 +38,12 @@ def extract_first_phone(text: str) -> str | None:
 
 
 def extract_urls(text: str) -> list[str]:
-    return list(dict.fromkeys(match.group(0).strip(".,;") for match in URL_RE.finditer(text)))
+    urls: list[str] = []
+    for match in URL_RE.finditer(text):
+        if match.start() > 0 and text[match.start() - 1] == "@":
+            continue
+        urls.append(match.group(0).strip(".,;"))
+    return list(dict.fromkeys(urls))
 
 
 def detect_profile_links(urls: list[str]) -> dict[str, str | None]:
