@@ -14,7 +14,6 @@ def test_contact_parser_extracts_location_from_mixed_contact_line_without_fake_w
 
     contact = parser.parse(blocks)
 
-    assert contact.full_name == "Mykhailo Savchenko"
+    assert contact.name == "Mykhailo Savchenko"
     assert contact.location == "Wrocław, Poland"
-    assert contact.website is None
-    assert contact.linkedin == "https://linkedin.com/in/msavchenko-stolarz"
+    assert contact.linkedin == "linkedin.com/in/msavchenko-stolarz"

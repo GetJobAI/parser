@@ -16,7 +16,7 @@ def test_certifications_parser_splits_entries_by_date_boundary() -> None:
         ]
     )
 
-    assert section.items == [
-        "Uprawnienia do obsługi CNC — klasa I · Instytut Mechanizacji Budownictwa 03.2016",
-        "Karta Polaka · Rzeczpospolita Polska 11.2010",
+    assert [(entry.name, entry.issuer, entry.date) for entry in section] == [
+        ("Uprawnienia do obsługi CNC — klasa I", "Instytut Mechanizacji Budownictwa", "03.2016"),
+        ("Karta Polaka", "Rzeczpospolita Polska", "11.2010"),
     ]

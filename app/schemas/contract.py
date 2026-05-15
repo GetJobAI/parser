@@ -22,6 +22,16 @@ class ResumeContentContractResponse(BaseModel):
 
 def build_resume_content_contract() -> ResumeContentContractResponse:
     example = ResumeContent(
+        style="professional",
+        headings={
+            "summary": "Summary",
+            "experience": "Experience",
+            "education": "Education",
+            "skills": "Skills",
+            "certifications": "Certifications",
+            "projects": "Projects",
+            "languages": "Languages",
+        },
         meta={
             "original_filename": "resume.pdf",
             "mime_type": "application/pdf",
@@ -36,61 +46,55 @@ def build_resume_content_contract() -> ResumeContentContractResponse:
             "extraction_method": "pymupdf",
         },
         contact={
-            "full_name": "Maria Kovalenko",
-            "email": "maria@example.com",
-            "phone": "+49 123 456789",
+            "name": "Example Candidate",
+            "email": "candidate@example.com",
+            "phone": "+49 000 000000",
             "location": "Berlin, DE",
-            "linkedin": "https://linkedin.com/in/maria-kovalenko",
-            "github": "https://github.com/maria-kovalenko",
-            "website": "https://maria.dev",
-            "raw_text": "Maria Kovalenko | Berlin, DE | maria@example.com | +49 123 456789",
+            "linkedin": "linkedin.com/in/example-candidate",
+            "github": "github.com/example-candidate",
         },
-        summary={
-            "raw_text": "Results-driven product manager with 6+ years of experience."
-        },
+        summary="Results-driven product manager with 6+ years of experience.",
         experience=[
             {
-                "title": "Senior Product Manager",
                 "company": "Acme GmbH",
-                "start_date": "2021-03",
-                "end_date": None,
-                "date_range_raw": "2021-03 - Present",
+                "title": "Senior Product Manager",
+                "dates": "03.2021 – present",
                 "location": "Berlin, DE",
                 "bullets": [
                     "Grew MAU by 40% after launching onboarding redesign in Q2 2023."
                 ],
-                "description_raw": None,
-                "raw_text": "Senior Product Manager at Acme GmbH, Berlin, DE",
+                "hide": False,
             }
         ],
         education=[
             {
                 "institution": "KPI Kyiv",
-                "degree": "MSc",
-                "field": "Computer Science",
-                "start_date": "2016-09",
-                "end_date": "2018-06",
-                "date_range_raw": "2016-09 - 2018-06",
+                "degree": "MSc — Computer Science",
+                "dates": "09.2016 – 06.2018",
                 "location": "Kyiv, UA",
-                "raw_text": "KPI Kyiv, MSc in Computer Science",
+                "grade": "5.0 / 5.0",
+                "hide": False,
             }
         ],
-        skills={
-            "items": ["Product Strategy", "SQL", "A/B Testing"],
-            "raw_text": "Product Strategy, SQL, A/B Testing",
-        },
-        certifications={
-            "items": ["AWS Cloud Practitioner"],
-            "raw_text": "AWS Cloud Practitioner",
-        },
-        languages={
-            "items": ["Ukrainian - Native", "English - C1", "German - B2"],
-            "raw_text": "Ukrainian - Native; English - C1; German - B2",
-        },
-        projects={
-            "items": ["Open Source CLI Tool"],
-            "raw_text": "Open Source CLI Tool - npm tool for internal automation",
-        },
+        skills=[
+            {"category": "Product", "items": ["Product Strategy", "A/B Testing"]},
+            {"category": "Technical", "items": ["SQL"]},
+        ],
+        certifications=[
+            {"name": "AWS Cloud Practitioner", "issuer": "Amazon Web Services", "date": "11.2023"},
+        ],
+        languages=[
+            {"name": "Ukrainian", "level": "Native"},
+            {"name": "English", "level": "C1"},
+            {"name": "German", "level": "B2"},
+        ],
+        projects=[
+            {
+                "name": "Open Source CLI Tool",
+                "description": "npm tool for internal automation",
+                "url": "github.com/example-candidate/cli-tool",
+            }
+        ],
         unassigned_blocks=[],
     )
 
@@ -100,8 +104,10 @@ def build_resume_content_contract() -> ResumeContentContractResponse:
         notes=[
             "This contract describes the JSON stored in resumes.content.",
             "The current backend does not expose a separate GET /resumes/{id} endpoint yet.",
-            "summary is an object with raw_text, not a plain string.",
-            "skills, certifications, languages, and projects use {items, raw_text}.",
+            "The resume data shape follows the template repository schema.",
+            "summary is stored as a plain string.",
+            "skills use grouped entries with {category, items}.",
+            "certifications, languages, and projects use structured arrays.",
             "meta and unassigned_blocks are part of the stored content contract.",
         ],
     )

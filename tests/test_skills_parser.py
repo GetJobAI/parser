@@ -18,14 +18,9 @@ def test_skills_parser_preserves_category_context() -> None:
         ]
     )
 
-    assert section.items == [
-        "Joinery: Mortise & tenon",
-        "Joinery: Dovetail",
-        "Joinery: Finger joint",
-        "Machines: CNC router",
-        "Machines: Panel saw",
-        "Finishing: Oil & wax",
-        "Finishing: Water-based lacquer",
-        "Software: SketchUp",
-        "Software: AutoCAD LT",
+    assert [(group.category, group.items) for group in section] == [
+        ("Joinery", ["Mortise & tenon", "Dovetail", "Finger joint"]),
+        ("Machines", ["CNC router", "Panel saw"]),
+        ("Finishing", ["Oil & wax", "Water-based lacquer"]),
+        ("Software", ["SketchUp", "AutoCAD LT"]),
     ]

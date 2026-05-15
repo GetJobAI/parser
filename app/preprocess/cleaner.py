@@ -8,11 +8,21 @@ from app.utils.regexes import extract_date_range
 from app.utils.text import collapse_whitespace, merge_text, normalize_bullet_prefix
 
 PUNCTUATION_END_RE = re.compile(r"[.:;!?]$")
+SECTION_HEADER_NAMES = (
+    "SUMMARY",
+    "EXPERIENCE",
+    "EDUCATION",
+    "SKILLS",
+    "CERTIFICATIONS",
+    "LANGUAGES",
+    "PROJECTS",
+    "CONTACT",
+)
 SECTION_HEADER_RE = re.compile(
-    r"\b(SUMMARY|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|LANGUAGES|PROJECTS|CONTACT)\b",
+    r"\b(" + "|".join(re.escape(name) for name in SECTION_HEADER_NAMES) + r")\b",
 )
 LEADING_SECTION_RE = re.compile(
-    r"^\s*(SUMMARY|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|LANGUAGES|PROJECTS|CONTACT)\b(?:\s*[:|])?\s+(.+)$",
+    r"^\s*(" + "|".join(re.escape(name) for name in SECTION_HEADER_NAMES) + r")\b(?:\s*[:|])?\s+(.+)$",
 )
 TRAILING_COMPANY_RE = re.compile(
     r"^(?P<bullet>- .+?)\.\s+(?P<company>[A-Z].*(?:sp\. z o\.o\.|inc|llc|ltd|corp|gmbh|plc))\.?$",

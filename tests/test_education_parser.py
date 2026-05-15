@@ -16,6 +16,6 @@ def test_education_parser_extracts_degree_and_location_from_single_line() -> Non
 
     assert len(entries) == 1
     assert entries[0].institution == "Centrum Kształcenia Zawodowego nr 1"
-    assert entries[0].degree == "Vocational Certificate"
-    assert entries[0].field == "Stolarz (Carpenter)"
+    assert entries[0].degree == "Vocational Certificate — Stolarz (Carpenter)"
     assert entries[0].location == "Wrocław, Poland"
+    assert entries[0].grade == "Celujący (6/6)"

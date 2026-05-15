@@ -18,28 +18,27 @@ class QualityChecker:
 
         if any(
             [
-                content.contact.full_name,
+                content.contact.name,
                 content.contact.email,
                 content.contact.phone,
                 content.contact.linkedin,
                 content.contact.github,
-                content.contact.website,
             ]
         ):
             major_sections_found.append("contact")
-        if content.summary.raw_text:
+        if content.summary:
             major_sections_found.append("summary")
         if content.experience:
             major_sections_found.append("experience")
         if content.education:
             major_sections_found.append("education")
-        if content.skills.items or content.skills.raw_text:
+        if content.skills:
             major_sections_found.append("skills")
-        if content.certifications.items or content.certifications.raw_text:
+        if content.certifications:
             major_sections_found.append("certifications")
-        if content.languages.items or content.languages.raw_text:
+        if content.languages:
             major_sections_found.append("languages")
-        if content.projects.items or content.projects.raw_text:
+        if content.projects:
             major_sections_found.append("projects")
 
         if not any([content.contact.email, content.contact.phone, content.contact.linkedin, content.contact.github]):

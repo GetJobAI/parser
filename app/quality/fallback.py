@@ -59,7 +59,7 @@ class FallbackManager:
                 fallback_used = True
                 warnings.append("Fallback heuristics inferred an education section.")
 
-        if not content.skills.items and not content.skills.raw_text:
+        if not content.skills:
             skills_blocks = [block for block in all_blocks if _looks_like_skills(block.text)]
             if skills_blocks:
                 content.skills = self._skills_parser.parse(skills_blocks)
@@ -79,7 +79,6 @@ class FallbackManager:
                 content.contact.phone,
                 content.contact.linkedin,
                 content.contact.github,
-                content.contact.website,
             ]
         )
 

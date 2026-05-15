@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from app.schemas.content import GenericListSection, TextBlock
+from app.schemas.content import TextBlock
 from app.utils.text import blocks_to_text
 
 LIST_SEPARATOR_RE = re.compile(r"\s*(?:\n|,|;|\||•)\s*")
@@ -10,7 +10,7 @@ DATE_BOUNDARY_RE = re.compile(r"((?:\d{1,2}[./-]\d{4}|\d{4})\.?)\s+(?=[A-ZА-Я]
 
 
 class GenericListParser:
-    def parse(
+    def parse_items(
         self,
         blocks: list[TextBlock],
         *,
@@ -18,19 +18,18 @@ class GenericListParser:
         split_on_middot: bool = False,
         split_on_date_boundaries: bool = False,
         max_item_length: int = 220,
-    ) -> GenericListSection:
+    ) -> list[str]:
         raw_text = blocks_to_text(blocks) or None
         if not raw_text:
-            return GenericListSection()
+            return []
 
-        items = self._extract_items(
+        return self._extract_items(
             raw_text,
             split_only_if_list_like=split_only_if_list_like,
             split_on_middot=split_on_middot,
             split_on_date_boundaries=split_on_date_boundaries,
             max_item_length=max_item_length,
         )
-        return GenericListSection(items=items, raw_text=raw_text)
 
     def _extract_items(
         self,

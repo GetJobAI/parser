@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class TextBlock(BaseModel):
@@ -29,59 +29,77 @@ class ResumeMeta(BaseModel):
     extraction_method: str | None = None
 
 
+class HeadingOverrides(BaseModel):
+    summary: str | None = None
+    experience: str | None = None
+    education: str | None = None
+    skills: str | None = None
+    certifications: str | None = None
+    projects: str | None = None
+    languages: str | None = None
+
+
 class ContactInfo(BaseModel):
-    full_name: str | None = None
+    name: str | None = Field(default=None, validation_alias=AliasChoices("name", "full_name"))
     email: str | None = None
     phone: str | None = None
     location: str | None = None
     linkedin: str | None = None
     github: str | None = None
-    website: str | None = None
-    raw_text: str | None = None
-
-
-class SummarySection(BaseModel):
-    raw_text: str | None = None
 
 
 class ExperienceEntry(BaseModel):
-    title: str | None = None
     company: str | None = None
-    start_date: str | None = None
-    end_date: str | None = None
-    date_range_raw: str | None = None
+    title: str | None = None
+    dates: str | None = None
     location: str | None = None
     bullets: list[str] = Field(default_factory=list)
-    description_raw: str | None = None
-    raw_text: str | None = None
+    hide: bool = False
 
 
 class EducationEntry(BaseModel):
     institution: str | None = None
     degree: str | None = None
-    field: str | None = None
-    start_date: str | None = None
-    end_date: str | None = None
-    date_range_raw: str | None = None
+    dates: str | None = None
     location: str | None = None
-    raw_text: str | None = None
+    grade: str | None = None
+    hide: bool = False
 
 
-class GenericListSection(BaseModel):
+class SkillGroup(BaseModel):
+    category: str
     items: list[str] = Field(default_factory=list)
-    raw_text: str | None = None
+
+
+class CertificationEntry(BaseModel):
+    name: str | None = None
+    issuer: str | None = None
+    date: str | None = None
+
+
+class LanguageEntry(BaseModel):
+    name: str | None = None
+    level: str | None = None
+
+
+class ProjectEntry(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    url: str | None = None
 
 
 class ResumeContent(BaseModel):
-    meta: ResumeMeta = Field(default_factory=ResumeMeta)
+    style: Literal["professional", "minimal", "technical"] | None = None
+    headings: HeadingOverrides | None = None
     contact: ContactInfo = Field(default_factory=ContactInfo)
-    summary: SummarySection = Field(default_factory=SummarySection)
+    summary: str | None = None
     experience: list[ExperienceEntry] = Field(default_factory=list)
     education: list[EducationEntry] = Field(default_factory=list)
-    skills: GenericListSection = Field(default_factory=GenericListSection)
-    certifications: GenericListSection = Field(default_factory=GenericListSection)
-    languages: GenericListSection = Field(default_factory=GenericListSection)
-    projects: GenericListSection = Field(default_factory=GenericListSection)
+    skills: list[SkillGroup] = Field(default_factory=list)
+    certifications: list[CertificationEntry] = Field(default_factory=list)
+    languages: list[LanguageEntry] = Field(default_factory=list)
+    projects: list[ProjectEntry] = Field(default_factory=list)
+    meta: ResumeMeta = Field(default_factory=ResumeMeta)
     unassigned_blocks: list[str] = Field(default_factory=list)
 
     @classmethod

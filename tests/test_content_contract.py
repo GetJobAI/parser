@@ -14,6 +14,6 @@ def test_resume_content_contract_exposes_core_sections() -> None:
     assert "unassigned_blocks" in schema_properties
 
     example = contract.content_example
-    assert example["summary"]["raw_text"] is not None
-    assert "items" in example["skills"]
+    assert example["summary"] is not None
+    assert example["skills"][0]["category"] is not None
     assert "meta" in example

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.schemas.content import ExperienceEntry, TextBlock
-from app.utils.regexes import extract_date_range, split_date_range
+from app.utils.regexes import extract_date_range
 
 ROLE_KEYWORDS = {
     "engineer",
@@ -33,7 +33,7 @@ class ExperienceParser:
             return []
 
         entries = [self._parse_entry(group) for group in self._split_entries(lines)]
-        return [entry for entry in entries if entry.raw_text]
+        return [entry for entry in entries if any([entry.company, entry.title, entry.dates, entry.location, entry.bullets])]
 
     def _split_entries(self, lines: list[str]) -> list[list[str]]:
         entries: list[list[str]] = []
@@ -70,10 +70,8 @@ class ExperienceParser:
         return False
 
     def _parse_entry(self, lines: list[str]) -> ExperienceEntry:
-        raw_text = "\n".join(lines).strip()
         header_lines = self._extract_header_lines(lines)
         date_range_raw = next((extract_date_range(line) for line in lines if extract_date_range(line)), None)
-        start_date, end_date = split_date_range(date_range_raw)
         title, company, location, header_description = self._classify_header_lines(
             header_lines, date_range_raw=date_range_raw
         )
@@ -83,18 +81,16 @@ class ExperienceParser:
             for line in lines
             if line not in header_lines and not line.startswith("- ")
         ]
-        description_raw = "\n".join(description_lines).strip() or None
+        description_lines = [line.strip() for line in description_lines if line.strip()]
+        if description_lines:
+            bullets = description_lines + bullets
 
         return ExperienceEntry(
-            title=title,
             company=company,
-            start_date=start_date,
-            end_date=end_date,
-            date_range_raw=date_range_raw,
+            title=title,
+            dates=date_range_raw,
             location=location,
             bullets=bullets,
-            description_raw=description_raw,
-            raw_text=raw_text or None,
         )
 
     def _extract_header_lines(self, lines: list[str]) -> list[str]:
@@ -111,6 +107,8 @@ class ExperienceParser:
         header_lines = [non_bullet_lines[0]]
         if len(non_bullet_lines) >= 2 and self._looks_like_header_line(non_bullet_lines[1]):
             header_lines.append(non_bullet_lines[1])
+        if len(non_bullet_lines) >= 3 and extract_date_range(non_bullet_lines[2]):
+            header_lines.append(non_bullet_lines[2])
         return header_lines
 
     def _classify_header_lines(

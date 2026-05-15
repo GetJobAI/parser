@@ -17,8 +17,7 @@ def test_experience_parser_keeps_partial_but_honest_structure() -> None:
     assert len(entries) == 1
     assert entries[0].title == "Senior Backend Engineer"
     assert entries[0].company == "Acme Corp"
-    assert entries[0].start_date == "Jan 2020"
-    assert entries[0].end_date == "Present"
+    assert entries[0].dates == "Jan 2020 - Present"
     assert entries[0].bullets == ["Built parsing APIs", "Reduced latency"]
 
 
@@ -39,6 +38,4 @@ def test_experience_parser_keeps_leading_description_outside_header() -> None:
     assert entries[0].company == "Drewno & Forma"
     assert entries[0].title == "Master Carpenter"
     assert entries[0].location == "Wrocław, Poland"
-    assert entries[0].description_raw == (
-        "Design and build bespoke solid oak and walnut furniture to client specifications."
-    )
+    assert entries[0].bullets[0] == "Design and build bespoke solid oak and walnut furniture to client specifications."

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.schemas.content import EducationEntry, TextBlock
-from app.utils.regexes import extract_date_range, split_date_range
+from app.utils.regexes import extract_date_range
 
 DEGREE_MARKERS = {
     "bachelor",
@@ -20,11 +20,6 @@ DEGREE_MARKERS = {
     "vocational",
 }
 INSTITUTION_MARKERS = {"university", "college", "school", "institute", "academy", "faculty"}
-LOCATION_TAIL_RE = re.compile(
-    r"^(?P<body>.+?)\s+(?P<location>[^\W\d_][\w.\-]*(?:\s+[^\W\d_][\w.\-]*)*,\s*[^\W\d_][\w.\-]*)$"
-)
-
-
 class EducationParser:
     def parse(self, blocks: list[TextBlock]) -> list[EducationEntry]:
         lines = [block.text for block in blocks if block.text.strip()]
@@ -32,7 +27,7 @@ class EducationParser:
             return []
 
         entries = [self._parse_entry(group) for group in self._split_entries(lines)]
-        return [entry for entry in entries if entry.raw_text]
+        return [entry for entry in entries if any([entry.institution, entry.degree, entry.dates, entry.location, entry.grade])]
 
     def _split_entries(self, lines: list[str]) -> list[list[str]]:
         entries: list[list[str]] = []
@@ -57,9 +52,7 @@ class EducationParser:
         return any(marker in lower_line for marker in INSTITUTION_MARKERS) and len(current) >= 2
 
     def _parse_entry(self, lines: list[str]) -> EducationEntry:
-        raw_text = "\n".join(lines).strip()
         date_range_raw = next((extract_date_range(line) for line in lines if extract_date_range(line)), None)
-        start_date, end_date = split_date_range(date_range_raw)
         cleaned_lines = [_remove_date_text(line) for line in lines if _remove_date_text(line)]
 
         location = next((_extract_location(line) for line in cleaned_lines if _extract_location(line)), None)
@@ -78,17 +71,27 @@ class EducationParser:
             (line for line in cleaned_lines if any(marker in line.lower() for marker in DEGREE_MARKERS)),
             None,
         )
+        if degree_line and institution and degree_line.startswith(institution):
+            degree_line = degree_line[len(institution) :].strip(" ,")
         degree, field = _split_degree_and_field(degree_line)
+        grade = next(
+            (
+                line.split("Grade:", maxsplit=1)[1].strip()
+                for line in lines
+                if "grade:" in line.lower()
+            ),
+            None,
+        )
+        combined_degree = degree
+        if degree and field:
+            combined_degree = f"{degree} — {field}"
 
         return EducationEntry(
             institution=_strip_location(institution),
-            degree=degree,
-            field=field,
-            start_date=start_date,
-            end_date=end_date,
-            date_range_raw=date_range_raw,
+            degree=combined_degree,
+            dates=date_range_raw,
             location=location,
-            raw_text=raw_text or None,
+            grade=grade,
         )
 
 
@@ -96,6 +99,12 @@ def _split_degree_and_field(line: str | None) -> tuple[str | None, str | None]:
     if not line:
         return None, None
     cleaned = _remove_date_text(line)
+    if cleaned is None:
+        return None, None
+    cleaned = re.sub(r"\bGrade:\s*.+$", "", cleaned, flags=re.IGNORECASE).strip(" ,")
+    location = _extract_location(cleaned)
+    if location:
+        cleaned = cleaned[: cleaned.rfind(location)].strip(" ,")
     if " in " in cleaned.lower():
         parts = re.split(r"\bin\b", cleaned, maxsplit=1, flags=re.IGNORECASE)
         if len(parts) == 2:
@@ -121,19 +130,28 @@ def _remove_date_text(line: str | None) -> str | None:
 
 
 def _extract_location(line: str) -> str | None:
-    match = LOCATION_TAIL_RE.match(line.strip())
-    if not match:
+    cleaned = re.sub(r"\bGrade:\s*.+$", "", line, flags=re.IGNORECASE).strip()
+    if "," not in cleaned:
         return None
-    return match.group("location").strip() or None
+    left, right = cleaned.rsplit(",", maxsplit=1)
+    country = right.strip()
+    if not country or any(char.isdigit() for char in country):
+        return None
+    left_tokens = left.strip().split()
+    if not left_tokens:
+        return None
+    city = left_tokens[-1]
+    return f"{city}, {country}".strip() or None
 
 
 def _strip_location(line: str | None) -> str | None:
     if line is None:
         return None
-    match = LOCATION_TAIL_RE.match(line.strip())
-    if not match:
-        return line.strip()
-    return match.group("body").strip() or None
+    stripped = line.strip()
+    location = _extract_location(stripped)
+    if not location or not stripped.endswith(location):
+        return stripped
+    return stripped[: -len(location)].strip(" ,") or None
 
 
 def _contains_degree_marker(line: str) -> bool:

@@ -50,6 +50,12 @@ def _is_two_column(blocks: list[TextBlock]) -> bool:
     if len(coordinate_blocks) < 6:
         return False
 
+    x0_values = sorted(block.x0 for block in coordinate_blocks if block.x0 is not None)
+    if not x0_values:
+        return False
+    if max(x0_values) - min(x0_values) < 80:
+        return False
+
     centers = sorted(((block.x0 + block.x1) / 2) for block in coordinate_blocks)
     split_x = sum(centers) / len(centers)
     left = [center for center in centers if center < split_x - 20]
