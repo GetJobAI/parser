@@ -5,11 +5,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.job_postings import router as job_postings_router
 from app.api.resumes import router as resumes_router
 from app.config import get_settings
 from app.db.client import Database
 from app.db.repository import ResumeRepository
 from app.events.publisher import ResumeParsedEventPublisher
+from app.job.pipeline import JobPostingPipeline
 from app.pipeline.resume_pipeline import ResumePipeline
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ async def lifespan(app: FastAPI):
     app.state.resume_repository = None
     app.state.db_available = False
     app.state.resume_pipeline = ResumePipeline(parser_version=settings.parser_version)
+    app.state.job_posting_pipeline = JobPostingPipeline(parser_version=settings.parser_version)
     app.state.resume_event_publisher = ResumeParsedEventPublisher(
         rabbitmq_url=settings.rabbitmq_url,
         exchange_name=settings.rabbitmq_exchange,
@@ -60,4 +63,5 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.include_router(job_postings_router)
 app.include_router(resumes_router)
