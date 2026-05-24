@@ -4,38 +4,17 @@ title Resume Parser Service - Use Case Diagram
 left to right direction
 skinparam shadowing false
 
-actor "Frontend Client" as Frontend
 actor "API Gateway" as Gateway
-actor "Developer / Frontender" as Developer
-actor "PostgreSQL" as Database
+actor "Frontend Developer" as FrontendDev
 
 rectangle "Resume Parser Service" {
   usecase "Parse uploaded resume" as UCParse
-  usecase "Validate file type\nand trusted user header" as UCValidate
-  usecase "Create processing record" as UCCreate
-  usecase "Extract text from PDF/DOCX" as UCExtract
-  usecase "Detect sections\nand parse content" as UCParseContent
-  usecase "Run fallback and\nquality checks" as UCQuality
-  usecase "Save parsed JSON\ninto resumes.content" as UCSave
-  usecase "Return parsing summary" as UCReturn
-  usecase "Get content contract\nfor frontend" as UCContract
+  usecase "Get content contract" as UCContract
   usecase "View API documentation" as UCDocs
 }
 
-Frontend --> Gateway
 Gateway --> UCParse
-Developer --> UCContract
-Developer --> UCDocs
-
-UCParse .> UCValidate : <<include>>
-UCParse .> UCCreate : <<include>>
-UCParse .> UCExtract : <<include>>
-UCParse .> UCParseContent : <<include>>
-UCParse .> UCQuality : <<include>>
-UCParse .> UCSave : <<include>>
-UCParse .> UCReturn : <<include>>
-
-UCCreate --> Database
-UCSave --> Database
+FrontendDev --> UCContract
+FrontendDev --> UCDocs
 
 @enduml

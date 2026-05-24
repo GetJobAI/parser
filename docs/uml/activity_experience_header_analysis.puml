@@ -1,0 +1,27 @@
+@startuml
+title Resume Parser Service - Activity Diagram For Experience Header Analysis
+
+start
+
+:Receive header lines from current experience entry;
+:Search for date range and remove it\nfrom header text;
+
+if (Date range found?) then (yes)
+  :Save original date range;
+else (no)
+  :Continue without date value;
+endif
+
+:Check company-like line;
+:Check job title pattern;
+:Check location pattern;
+:Assign detected values to\ncompany, title and location;
+
+if (Unknown text remains?) then (yes)
+  :Move unknown fragments\nto remaining entry text;
+else (no)
+endif
+
+:Return classified header fields;
+stop
+@enduml

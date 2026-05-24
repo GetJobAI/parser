@@ -3,53 +3,50 @@ title Resume Parser Service - Activity Diagram For Experience Parsing
 
 start
 
-:Receive blocks of experience section;
-:Merge blocks into section text;
+:Receive blocks from experience section;
+:Merge blocks into experience section text;
 :Split section into candidate job entries;
 
 repeat
   :Take next candidate entry;
-  :Extract raw_text for current entry;
+  :Extract text of current candidate entry;
   :Split entry into lines;
-  :Find header lines\n(company/title/date/location area);
+  :Detect header lines\nand descriptive lines;
 
-  :Search for date range using regex;
+  :Search date range in header\nor entry text;
 
   if (Date range found?) then (yes)
-    :Extract start_date,\nend_date,\ndate_range_raw;
+    :Save start date,\nend date and original date range;
   else (no)
-    :Keep date fields as null;
+    :Continue without date fields;
   endif
 
-  :Heuristically classify header text into:
-  - company
-  - title
-  - location;
+  :Analyze header lines and detect\ncompany, job title and location;
 
-  :Separate bullet lines from plain text lines;
+  :Separate bullet points from\nplain description text;
 
-  if (Bullet lines found?) then (yes)
-    :Store bullet items in bullets[];
+  if (Bullet points found?) then (yes)
+    :Save bullet points;
   else (no)
-    :Leave bullets[] empty;
+    :Continue without bullet points;
   endif
 
-  if (Non-bullet descriptive text remains?) then (yes)
-    :Store it in description_raw;
+  if (Description text remains?) then (yes)
+    :Save remaining text as description;
   else (no)
-    :Keep description_raw = null;
+    :Continue without description text;
   endif
 
-  :Create ExperienceEntry;
-  :Append entry to experience[];
+  :Create structured experience record;
+  :Add record to parsed experience list;
 
 repeat while (More candidate entries?) is (yes)
 
-if (No reliable entries built?) then (yes)
-  :Return raw entry text only\nor rely on fallback logic later;
+if (Reliable experience records found?) then (yes)
+  :Return parsed experience records;
 else (no)
+  :Save original experience text\nfor fallback processing;
 endif
 
-:Return parsed list of ExperienceEntry;
 stop
 @enduml

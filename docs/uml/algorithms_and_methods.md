@@ -25,6 +25,12 @@
 - [activity_parse_pipeline.puml](/home/kerio/Documents/nure/s_6/kkp/parcer/docs/uml/activity_parse_pipeline.puml)  
   Показує загальний алгоритм обробки резюме.
 
+- [activity_experience_parsing.puml](/home/kerio/Documents/nure/s_6/kkp/parcer/docs/uml/activity_experience_parsing.puml)  
+  Показує алгоритм розбору секції досвіду роботи.
+
+- [activity_experience_header_analysis.puml](/home/kerio/Documents/nure/s_6/kkp/parcer/docs/uml/activity_experience_header_analysis.puml)  
+  Показує окремий евристичний алгоритм визначення `company`, `title` і `location` у header-частині досвіду.
+
 - [state_parse_status.puml](/home/kerio/Documents/nure/s_6/kkp/parcer/docs/uml/state_parse_status.puml)  
   Показує зміну станів процесу парсингу.
 

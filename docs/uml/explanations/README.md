@@ -13,6 +13,7 @@
 - `activity_parse_pipeline.md`
 - `activity_section_detection.md`
 - `activity_experience_parsing.md`
+- `activity_experience_header_analysis.md`
 - `state_parse_status.md`
 - `er_resume_storage.md`
 - `component_resume_parser.md`

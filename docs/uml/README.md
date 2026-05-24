@@ -14,6 +14,7 @@
 - `sequence_parse_resume.puml`
 - `activity_section_detection.puml`
 - `activity_experience_parsing.puml`
+- `activity_experience_header_analysis.puml`
 
 Коротко про призначення:
 - `Use Case` показує, хто взаємодіє із сервісом і які сценарії використання існують.
@@ -25,5 +26,6 @@
 - `Sequence` показує покрокову взаємодію компонентів під час `POST /resumes/parse`.
 - `Activity (Section Detection)` показує алгоритм визначення секцій документа.
 - `Activity (Experience Parsing)` показує алгоритм розбору секції досвіду роботи.
+- `Activity (Experience Header Analysis)` показує, як сервіс визначає `company`, `title` і `location` у header-частині запису досвіду.
 
 Рендерити можна будь-яким PlantUML viewer або через розширення IDE.
