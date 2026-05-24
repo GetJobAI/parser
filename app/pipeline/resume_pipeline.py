@@ -13,7 +13,7 @@ from app.parsers.languages_parser import LanguagesParser
 from app.parsers.projects_parser import ProjectsParser
 from app.parsers.skills_parser import SkillsParser
 from app.parsers.summary_parser import SummaryParser
-from app.preprocess.cleaner import preprocess_blocks
+from app.preprocess.cleaner import detect_repeated_headers_footers, preprocess_blocks
 from app.preprocess.layout import detect_layout_and_reorder
 from app.quality.checker import QualityChecker, QualityReport
 from app.quality.fallback import FallbackManager
@@ -54,10 +54,16 @@ class ResumePipeline:
             extracted = self._extract(file_bytes=file_bytes, filename=filename)
             content.meta.extraction_method = extracted.extraction_method
             content.meta.warnings.extend(extracted.warnings)
+            content.meta.has_graphics = extracted.has_graphics
+            content.meta.has_headers_footers = extracted.has_headers_footers or detect_repeated_headers_footers(
+                extracted.blocks
+            )
+            content.meta.has_non_standard_fonts = extracted.has_non_standard_fonts
 
             cleaned_blocks = preprocess_blocks(extracted.blocks)
             layout_result = detect_layout_and_reorder(cleaned_blocks)
             content.meta.layout_detected = layout_result.layout_detected
+            content.meta.has_complex_layout = layout_result.has_complex_layout
 
             matches = detect_section_headers(layout_result.blocks)
             sectioned = build_section_map(layout_result.blocks, matches)

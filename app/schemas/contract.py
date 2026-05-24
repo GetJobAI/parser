@@ -44,6 +44,10 @@ def build_resume_content_contract() -> ResumeContentContractResponse:
             "partial_parse": False,
             "layout_detected": "single_column",
             "extraction_method": "pymupdf",
+            "has_complex_layout": False,
+            "has_graphics": False,
+            "has_headers_footers": False,
+            "has_non_standard_fonts": False,
         },
         contact={
             "name": "Example Candidate",

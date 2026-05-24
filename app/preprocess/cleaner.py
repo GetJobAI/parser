@@ -189,14 +189,34 @@ def _deduplicate_consecutive(blocks: list[TextBlock]) -> list[TextBlock]:
 
 
 def _remove_repeated_headers_footers(blocks: list[TextBlock]) -> list[TextBlock]:
+    repeated = _find_repeated_headers_footers(blocks)
+    if not repeated:
+        return blocks
+
+    return [
+        block
+        for block in blocks
+        if not (
+            block.text in repeated
+            and len(block.text) <= 120
+            and not any(symbol in block.text for symbol in ("@", "http", "linkedin", "github"))
+        )
+    ]
+
+
+def detect_repeated_headers_footers(blocks: list[TextBlock]) -> bool:
+    return bool(_find_repeated_headers_footers(blocks))
+
+
+def _find_repeated_headers_footers(blocks: list[TextBlock]) -> set[str]:
     pages: dict[int, list[TextBlock]] = defaultdict(list)
     for block in blocks:
         if block.page is None:
-            return blocks
+            return set()
         pages[block.page].append(block)
 
     if len(pages) < 2:
-        return blocks
+        return set()
 
     top_counter: Counter[str] = Counter()
     bottom_counter: Counter[str] = Counter()
@@ -218,16 +238,7 @@ def _remove_repeated_headers_footers(blocks: list[TextBlock]) -> list[TextBlock]
 
     repeated = {text for text, count in top_counter.items() if count >= 2}
     repeated |= {text for text, count in bottom_counter.items() if count >= 2}
-
-    return [
-        block
-        for block in blocks
-        if not (
-            block.text in repeated
-            and len(block.text) <= 120
-            and not any(symbol in block.text for symbol in ("@", "http", "linkedin", "github"))
-        )
-    ]
+    return repeated
 
 
 def _join_obvious_wraps(blocks: list[TextBlock]) -> list[TextBlock]:

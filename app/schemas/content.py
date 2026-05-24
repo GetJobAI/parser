@@ -27,6 +27,10 @@ class ResumeMeta(BaseModel):
     partial_parse: bool = False
     layout_detected: str | None = None
     extraction_method: str | None = None
+    has_complex_layout: bool = False
+    has_graphics: bool = False
+    has_headers_footers: bool = False
+    has_non_standard_fonts: bool = False
 
 
 class HeadingOverrides(BaseModel):
@@ -125,6 +129,9 @@ class ExtractionResult(BaseModel):
     extraction_method: str
     warnings: list[str] = Field(default_factory=list)
     ocr_candidate: bool = False
+    has_graphics: bool = False
+    has_headers_footers: bool = False
+    has_non_standard_fonts: bool = False
 
 
 class SectionMatch(BaseModel):

@@ -10,11 +10,12 @@ from app.schemas.content import TextBlock
 class LayoutResult(BaseModel):
     blocks: list[TextBlock]
     layout_detected: str
+    has_complex_layout: bool = False
 
 
 def detect_layout_and_reorder(blocks: list[TextBlock]) -> LayoutResult:
     if not blocks or all(block.page is None or block.x0 is None for block in blocks):
-        return LayoutResult(blocks=blocks, layout_detected="single_column")
+        return LayoutResult(blocks=blocks, layout_detected="single_column", has_complex_layout=False)
 
     pages: dict[int, list[TextBlock]] = defaultdict(list)
     for block in blocks:
@@ -42,6 +43,7 @@ def detect_layout_and_reorder(blocks: list[TextBlock]) -> LayoutResult:
     return LayoutResult(
         blocks=ordered,
         layout_detected="two_column" if any_two_column else "single_column",
+        has_complex_layout=any_two_column,
     )
 
 

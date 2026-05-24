@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from app.config import get_settings
 from app.db.repository import ResumeRepository, get_resume_repository
+from app.events.publisher import ResumeParsedEventPublisher
 from app.pipeline.resume_pipeline import ResumePipeline
 from app.schemas.contract import ResumeContentContractResponse, build_resume_content_contract
 from app.schemas.content import ResumeContent
@@ -24,6 +25,10 @@ def get_resume_pipeline(request: Request) -> ResumePipeline:
     return request.app.state.resume_pipeline
 
 
+def get_resume_event_publisher(request: Request) -> ResumeParsedEventPublisher:
+    return request.app.state.resume_event_publisher
+
+
 @router.get("/resumes/content-contract", response_model=ResumeContentContractResponse)
 async def get_resume_content_contract() -> ResumeContentContractResponse:
     return build_resume_content_contract()
@@ -35,6 +40,7 @@ async def parse_resume(
     file: UploadFile = File(...),
     repository: ResumeRepository = Depends(get_resume_repository),
     pipeline: ResumePipeline = Depends(get_resume_pipeline),
+    event_publisher: ResumeParsedEventPublisher = Depends(get_resume_event_publisher),
 ) -> ParseResumeResponse:
     settings = get_settings()
     header_name = settings.user_id_header
@@ -83,10 +89,24 @@ async def parse_resume(
         mime_type=processing_content.meta.mime_type or "application/octet-stream",
     )
     await repository.update_content(resume_id=resume_id, content=content)
+    event_published = await event_publisher.publish_resume_parsed(
+        resume_id=str(resume_id),
+        user_id=user_id,
+    )
 
     return ParseResumeResponse(
         resume_id=str(resume_id),
+        parse_status=content.meta.parse_status,
         partial_parse=content.meta.partial_parse,
+        fallback_used=content.meta.fallback_used,
+        ocr_used=content.meta.ocr_used,
+        extraction_method=content.meta.extraction_method,
+        layout_detected=content.meta.layout_detected,
+        has_complex_layout=content.meta.has_complex_layout,
+        has_graphics=content.meta.has_graphics,
+        has_headers_footers=content.meta.has_headers_footers,
+        has_non_standard_fonts=content.meta.has_non_standard_fonts,
+        event_published=event_published,
         warnings=content.meta.warnings,
         major_sections_found=quality_report.major_sections_found,
     )

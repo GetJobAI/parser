@@ -1,0 +1,42 @@
+services:
+  resume-parser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/resume_db
+      USER_ID_HEADER: X-User-Id
+      PARSER_VERSION: v1
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: resume.events
+      RABBITMQ_ROUTING_KEY: resume.parsing.completed
+      RABBITMQ_EVENT_NAME: resume.parsing.completed
+      RABBITMQ_QUEUE: resume.parsing.completed.queue
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: resume_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
