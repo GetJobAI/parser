@@ -1,40 +1,40 @@
 @startuml
-title Resume Parser Service - Activity Diagram For Section Detection
+title UML-діаграма активності визначення секцій резюме
 
 start
 
-:Receive reordered text blocks;
-:Initialize empty list of section matches;
+:Отримати перевпорядковані текстові блоки;
+:Ініціалізувати список кандидатів у секції;
 
 repeat
-  :Take next text block;
-  :Normalize text\n(trim, lowercase, collapse spaces);
+  :Взяти наступний текстовий блок;
+  :Нормалізувати текст\n(обрізати, звести до нижнього регістру, стиснути пробіли);
 
-  if (Block looks like short standalone header?) then (yes)
-    :Compare against section dictionary\n(contact, summary, experience,\neducation, skills, certifications,\nlanguages, projects);
-    :Run fuzzy matching for synonyms\nand minor typos;
+  if (Блок схожий на короткий окремий заголовок?) then (так)
+    :Порівняти блок із відомими назвами секцій\nта типовими варіантами заголовків;
+    :Оцінити найкращого кандидата на секцію;
 
-    if (Best match score above threshold?) then (yes)
-      :Create SectionMatch\n(canonical_name, score, block_order, source_text);
-      :Append match to list;
-    else (no)
-      :Ignore block as non-header;
+    if (Оцінка найкращого збігу вища за поріг?) then (так)
+      :Прийняти блок як заголовок секції;
+      :Додати заголовок до списку кандидатів;
+    else (ні)
+      :Ігнорувати блок як не-заголовок;
     endif
-  else (no)
-    :Ignore block as content text;
+  else (ні)
+    :Ігнорувати блок як звичайний текст вмісту;
   endif
 
-repeat while (More blocks?) is (yes)
+repeat while (Є ще блоки?) is (так)
 
-:Sort detected matches by block order;
+:Відсортувати прийняті заголовки\nза порядком у документі;
 
-if (Any headers found?) then (yes)
-  :Build section boundaries\nfrom current header to next header;
-  :Assign blocks to detected sections;
-else (no)
-  :Mark all blocks as unassigned\nfor fallback classification;
+if (Хоч один заголовок знайдено?) then (так)
+  :Побудувати межі секцій;
+  :Призначити блоки вмісту до секцій;
+else (ні)
+  :Позначити блоки як нерозподілені\nдля fallback-обробки;
 endif
 
-:Return section matches\nand sectioned document;
+:Повернути знайдені секції\nта нерозподілений вміст;
 stop
 @enduml

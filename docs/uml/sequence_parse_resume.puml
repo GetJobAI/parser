@@ -1,44 +1,43 @@
 @startuml
-title Resume Parser Service - Sequence Diagram For POST /resumes/parse
+title UML-діаграма послідовності обробки запиту на парсинг резюме
 
-actor Client
-participant "API Gateway" as Gateway
-participant "FastAPI endpoint\nparse_resume()" as API
-participant "ResumeRepository" as Repo
-participant "ResumePipeline" as Pipeline
-participant "PDF/DOCX Extractor" as Extractor
-participant "Cleaner + Layout +\nSection Detector" as Detection
-participant "Section Parsers" as Parsers
-participant "Fallback + Quality" as Quality
-database "PostgreSQL" as PG
+actor Клієнт as Client
+participant "Шлюз або зовнішня система" as Gateway
+participant "Інтерфейс сервісу парсингу" as API
+participant "Рівень збереження даних" as Persistence
+participant "Координатор парсингу" as Coordinator
+participant "Модулі аналізу документа" as Analysis
+participant "Модулі валідації та fallback-обробки" as Validation
+participant "Публікатор подій" as Publisher
+database "Сховище даних" as Storage
+queue "Брокер повідомлень" as Broker
 
-Client -> Gateway : upload resume + auth context
-Gateway -> API : multipart/form-data + trusted user_id header
+Client -> Gateway : Надіслати документ
+Gateway -> API : Передати запит на парсинг
 
-API -> API : validate header, extension, MIME
-API -> Repo : create_resume(processing content)
-Repo -> PG : INSERT INTO resumes
-PG --> Repo : resume_id
-Repo --> API : resume_id
+API -> API : Перевірити запит
+API -> Persistence : Створити запис обробки
+Persistence -> Storage : Зберегти початковий стан
+Storage --> Persistence : Ідентифікатор запису
+Persistence --> API : Ідентифікатор запису
 
-API -> API : read file bytes
-API -> Pipeline : parse(file_bytes, filename, mime_type)
+API -> Coordinator : Запустити пайплайн парсингу
+Coordinator -> Analysis : Витягти й проаналізувати вміст документа
+Analysis --> Coordinator : Чернетка структурованого результату
+Coordinator -> Validation : Перевірити результат і застосувати fallback за потреби
+Validation --> Coordinator : Підсумковий структурований результат
+Coordinator --> API : Результат парсингу
 
-Pipeline -> Extractor : choose PDF or DOCX extractor
-Extractor --> Pipeline : blocks + extraction metadata
-Pipeline -> Detection : preprocess, layout, section detection
-Detection --> Pipeline : sectioned blocks
-Pipeline -> Parsers : parse contact/summary/\nexperience/education/\nskills/certifications/\nlanguages/projects
-Parsers --> Pipeline : structured ResumeContent
-Pipeline -> Quality : apply fallback and quality checks
-Quality --> Pipeline : final content + quality report
-Pipeline --> API : ResumeContent + QualityReport
+API -> Persistence : Зберегти підсумковий результат
+Persistence -> Storage : Оновити збережений вміст
+Storage --> Persistence : Підтвердження
+Persistence --> API : Підтвердження
 
-API -> Repo : update_content(resume_id, content)
-Repo -> PG : UPDATE resumes SET content=...
-PG --> Repo : ok
-Repo --> API : ok
+API -> Publisher : Опублікувати сповіщення про завершення
+Publisher -> Broker : Надіслати інтеграційну подію
+Broker --> Publisher : Стан доставки
+Publisher --> API : Стан сповіщення
 
-API --> Gateway : resume_id + partial_parse + warnings + major_sections_found
-Gateway --> Client : HTTP 201 response
+API --> Gateway : Повернути короткий підсумок парсингу
+Gateway --> Client : Відповідь
 @enduml

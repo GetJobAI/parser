@@ -1,37 +1,31 @@
 @startuml
-title Resume Parser Service - Deployment Diagram
+title UML-діаграма розгортання сервісу парсингу
 
 skinparam shadowing false
 
-node "Client Device" as ClientNode {
-  artifact "Frontend UI\nor API client" as Client
+node "Клієнтський вузол" as ClientNode {
+  artifact "Клієнтський застосунок\nабо зовнішня система" as Client
 }
 
-node "Gateway Layer" as GatewayNode {
-  artifact "API Gateway" as Gateway
+node "Шлюзовий вузол" as GatewayNode {
+  artifact "API Gateway / інтеграційний рівень" as Gateway
 }
 
-node "Application Host" as AppHost {
-  node "Python Runtime" as PythonNode {
-    artifact "FastAPI Resume Parser Service" as App
-    artifact "Swagger / OpenAPI Docs" as Docs
-  }
+node "Вузол застосунку" as AppNode {
+  artifact "Середовище виконання\nсервісу парсингу" as ParserService
 }
 
-node "Database Host" as DBHost {
-  database "PostgreSQL\npublic.resumes" as PG
+node "Вузол зберігання" as StorageNode {
+  database "Сховище структурованих даних" as DataStore
 }
 
-node "Developer Machine" as DevNode {
-  artifact "scripts/parse_pdf.py" as ParseScript
-  artifact "PlantUML diagrams" as UMLDocs
+node "Вузол обміну повідомленнями" as MessagingNode {
+  queue "Брокер повідомлень" as Broker
 }
 
-Client --> Gateway : HTTPS request
-Gateway --> App : POST /resumes/parse\nGET /resumes/content-contract
-App --> PG : create/update resumes row
-Docs -- App
-ParseScript --> App : local architecture reference
-UMLDocs -- DevNode
+Client --> Gateway : HTTPS
+Gateway --> ParserService : HTTP / REST
+ParserService --> DataStore : підключення до бази даних
+ParserService --> Broker : протокол обміну повідомленнями
 
 @enduml

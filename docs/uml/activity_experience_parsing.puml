@@ -1,51 +1,51 @@
 @startuml
-title Resume Parser Service - Activity Diagram For Experience Parsing
+title UML-діаграма активності парсингу секції досвіду
 
 start
 
-:Receive blocks from experience section;
-:Merge blocks into experience section text;
-:Split section into candidate job entries;
+:Отримати блоки секції досвіду;
+:Об'єднати блоки в текст секції досвіду;
+:Розбити секцію на кандидатні записи про роботу;
 
 repeat
-  :Take next candidate entry;
-  :Extract text of current candidate entry;
-  :Split entry into lines;
-  :Detect header lines\nand descriptive lines;
+  :Взяти наступний кандидатний запис;
+  :Витягти текст поточного кандидатного запису;
+  :Розбити запис на рядки;
+  :Визначити рядки заголовка\nта описові рядки;
 
-  :Search date range in header\nor entry text;
+  :Шукати діапазон дат у заголовку\nабо в тексті запису;
 
-  if (Date range found?) then (yes)
-    :Save start date,\nend date and original date range;
-  else (no)
-    :Continue without date fields;
+  if (Діапазон дат знайдено?) then (так)
+    :Зберегти дату початку,\nдату завершення і вихідний діапазон дат;
+  else (ні)
+    :Продовжити без полів дат;
   endif
 
-  :Analyze header lines and detect\ncompany, job title and location;
+  :Проаналізувати рядки заголовка і визначити\nкомпанію, посаду та локацію;
 
-  :Separate bullet points from\nplain description text;
+  :Відокремити марковані пункти\nвід звичайного описового тексту;
 
-  if (Bullet points found?) then (yes)
-    :Save bullet points;
-  else (no)
-    :Continue without bullet points;
+  if (Марковані пункти знайдено?) then (так)
+    :Зберегти марковані пункти;
+  else (ні)
+    :Продовжити без маркованих пунктів;
   endif
 
-  if (Description text remains?) then (yes)
-    :Save remaining text as description;
-  else (no)
-    :Continue without description text;
+  if (Залишився описовий текст?) then (так)
+    :Зберегти решту тексту як опис;
+  else (ні)
+    :Продовжити без описового тексту;
   endif
 
-  :Create structured experience record;
-  :Add record to parsed experience list;
+  :Створити структурований запис досвіду;
+  :Додати запис до списку розпарсеного досвіду;
 
-repeat while (More candidate entries?) is (yes)
+repeat while (Є ще кандидатні записи?) is (так)
 
-if (Reliable experience records found?) then (yes)
-  :Return parsed experience records;
-else (no)
-  :Save original experience text\nfor fallback processing;
+if (Надійні записи досвіду знайдено?) then (так)
+  :Повернути розпарсені записи досвіду;
+else (ні)
+  :Зберегти вихідний текст досвіду\nдля fallback-обробки;
 endif
 
 stop

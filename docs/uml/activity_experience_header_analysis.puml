@@ -1,27 +1,27 @@
 @startuml
-title Resume Parser Service - Activity Diagram For Experience Header Analysis
+title UML-діаграма активності аналізу заголовка запису досвіду
 
 start
 
-:Receive header lines from current experience entry;
-:Search for date range and remove it\nfrom header text;
+:Отримати рядки заголовка\nпоточного запису досвіду;
+:Знайти діапазон дат і прибрати його\nіз тексту заголовка;
 
-if (Date range found?) then (yes)
-  :Save original date range;
-else (no)
-  :Continue without date value;
+if (Діапазон дат знайдено?) then (так)
+  :Зберегти вихідний діапазон дат;
+else (ні)
+  :Продовжити без значення дати;
 endif
 
-:Check company-like line;
-:Check job title pattern;
-:Check location pattern;
-:Assign detected values to\ncompany, title and location;
+:Перевірити рядок, схожий на компанію;
+:Перевірити шаблон назви посади;
+:Перевірити шаблон локації;
+:Призначити виявлені значення\nкомпанії, посаді та локації;
 
-if (Unknown text remains?) then (yes)
-  :Move unknown fragments\nto remaining entry text;
-else (no)
+if (Залишився невідомий текст?) then (так)
+  :Перенести невідомі фрагменти\nдо решти тексту запису;
+else (ні)
 endif
 
-:Return classified header fields;
+:Повернути класифіковані поля заголовка;
 stop
 @enduml

@@ -1,20 +1,26 @@
 @startuml
-title Resume Parser Service - Use Case Diagram
+title UML-діаграма прецедентів сервісу парсингу
 
 left to right direction
 skinparam shadowing false
 
-actor "API Gateway" as Gateway
-actor "Frontend Developer" as FrontendDev
+actor "Зовнішня система" as ExternalSystem
+actor "Розробник / інтегратор" as Integrator
+actor "Інфраструктура обміну повідомленнями" as Messaging
 
-rectangle "Resume Parser Service" {
-  usecase "Parse uploaded resume" as UCParse
-  usecase "Get content contract" as UCContract
-  usecase "View API documentation" as UCDocs
+rectangle "Сервіс парсингу резюме" {
+  usecase "Надіслати документ на парсинг" as UCParse
+  usecase "Отримати підсумок парсингу" as UCResult
+  usecase "Отримати інтеграційний контракт" as UCContract
+  usecase "Переглянути документацію сервісу" as UCDocs
+  usecase "Сповістити downstream-системи\nпро завершення парсингу" as UCNotify
 }
 
-Gateway --> UCParse
-FrontendDev --> UCContract
-FrontendDev --> UCDocs
+ExternalSystem --> UCParse
+UCParse .> UCResult : <<include>>
+UCParse .> UCNotify : <<include>>
+Integrator --> UCContract
+Integrator --> UCDocs
+Messaging --> UCNotify
 
 @enduml

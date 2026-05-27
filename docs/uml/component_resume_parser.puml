@@ -1,71 +1,70 @@
 @startuml
-title Resume Parser Service - Component Diagram
+title UML-діаграма компонентів сервісу парсингу
 
-left to right direction
+top to bottom direction
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam defaultTextAlignment center
 skinparam packageStyle rectangle
 
-package "API Layer" as ApiLayer {
-  [FastAPI App\napp/main.py] as Main
-  [Resumes API\napp/api/resumes.py] as API
-  [Settings\napp/config.py] as Config
+package "Рівень інтерфейсу" {
+  [Сервісний API] as ServiceAPI
+  [Інтеграційний контракт] as Contract
+  [Конфігурація] as Config
+  Contract -[hidden]right- Config
 }
 
-package "Core Layer" as CoreLayer {
-  [ResumePipeline\napp/pipeline/resume_pipeline.py] as Pipeline
-  [Extraction\nPDFExtractor + DOCXExtractor] as Extraction
-  [Preprocess and Detection\nCleaner + Layout + Sections + Boundaries] as Detection
-  [Section Parsers\nContact + Summary + Experience + Education\nSkills + Certifications + Languages + Projects] as Parsers
-  [Quality Control\nFallbackManager + QualityChecker] as Quality
+package "Рівень застосунку" {
+  [Координатор парсингу резюме] as ResumeCoordinator
+  [Координатор парсингу вакансій] as JobCoordinator
+  ResumeCoordinator -[hidden]right- JobCoordinator
 }
 
-package "Persistence Layer" as PersistenceLayer {
-  [ResumeRepository\napp/db/repository.py] as Repo
-  [Database Client\napp/db/client.py] as DBClient
+package "Предметні модулі" {
+  package "Спільна обробка" {
+    [Модуль витягання вмісту документа] as Extraction
+    [Модуль визначення структури] as Detection
+    Extraction -[hidden]down- Detection
+  }
+  package "Обробка резюме" {
+    [Модуль парсингу резюме] as ResumeParsing
+    [Модуль валідації та fallback-обробки] as Quality
+    ResumeParsing -[hidden]down- Quality
+  }
+  package "Обробка вакансій" {
+    [Модуль парсингу вакансій] as JobParsing
+  }
+  Detection -[hidden]right- ResumeParsing
+  ResumeParsing -[hidden]right- JobParsing
 }
 
-package "Contracts Layer" as ContractsLayer {
-  [ResumeContent\ncontent.py] as ResumeContent
-  [ParseResumeResponse\nresponse.py] as ParseResponse
-  [ContentContractResponse\ncontract.py] as ContractResponse
+package "Інфраструктурний рівень" {
+  [Адаптер збереження даних] as Persistence
+  [Адаптер публікації подій] as Events
+  Persistence -[hidden]right- Events
 }
 
-database "PostgreSQL\npublic.resumes" as PG
+database "Сховище даних" as DataStore
+queue "Брокер повідомлень" as Broker
 
-Main --> Config : load
-Main --> Pipeline : initialize
-Main --> Repo : initialize
+DataStore -[hidden]right- Broker
 
-API --> Pipeline : parse file
-API --> Repo : create / update
-API --> ParseResponse : return summary
-API --> ContractResponse : return schema
+ServiceAPI ..> Contract : надає контракт
+ServiceAPI ..> Config : читає налаштування
+ServiceAPI --> ResumeCoordinator : запити на парсинг резюме
+ServiceAPI --> JobCoordinator : запити на парсинг вакансій
 
-Pipeline --> Extraction : extract blocks
-Pipeline --> Detection : prepare blocks
-Pipeline --> Parsers : parse sections
-Pipeline --> Quality : validate result
-Pipeline --> ResumeContent : build final JSON
+ResumeCoordinator --> Extraction : запускає обробку
+Detection --> ResumeParsing : структура резюме
+ResumeParsing --> Quality : валідація / уточнення
+ResumeCoordinator --> Persistence : зберігає результат
+ResumeCoordinator --> Events : сповіщає про завершення
 
-Repo --> DBClient : use pool
-DBClient --> PG : SQL
-Repo --> ResumeContent : store content
+JobCoordinator --> Extraction : готує джерело
+Detection --> JobParsing : підготовлений вміст
+JobCoordinator --> Quality : валідація
 
-Config -[hidden]-> Pipeline
-Extraction -[hidden]down-> Detection
-Detection -[hidden]down-> Parsers
-Parsers -[hidden]down-> Quality
-Repo -[hidden]down-> DBClient
-ParseResponse -[hidden]down-> ContractResponse
-CoreLayer -[hidden]-> PersistenceLayer
-PersistenceLayer -[hidden]-> ContractsLayer
-
-note bottom of CoreLayer
-The core layer contains the full parsing workflow:
-extraction, preprocessing, section detection,
-section parsing, fallback handling, and quality checks.
-end note
+Persistence --> DataStore : читання / запис
+Events --> Broker : публікація події
 
 @enduml

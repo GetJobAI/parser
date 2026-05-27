@@ -1,98 +1,92 @@
 @startuml
-title Resume Parser Service - ER Diagram
+title Схема зберігання результату парсингу резюме
 
 hide methods
 hide stereotypes
 skinparam shadowing false
 
-entity "resumes" as resumes {
-  * id : UUID
+entity "Розпарсений документ" as ParsedDocument {
+  * Ідентифікатор
   --
-  user_id : TEXT
-  content : JSONB
-  created_at : TIMESTAMPTZ
-  updated_at : TIMESTAMPTZ
+  Власник джерела
+  Збережений структурований вміст
+  Метадані створення
+  Метадані оновлення
 }
 
-entity "ResumeContent" as ResumeContent {
-  * meta
-  * contact
-  * summary
-  * experience[]
-  * education[]
-  * skills
-  * certifications
-  * languages
-  * projects
-  * unassigned_blocks[]
+entity "Структурований вміст резюме" as StructuredResumeContent {
+  Контактна інформація
+  Загальний опис
+  Записи про досвід
+  Записи про освіту
+  Групи навичок
+  Сертифікати
+  Записи про мови
+  Записи про проєкти
+  Технічні метадані
+  Нерозподілені фрагменти вмісту
 }
 
-entity "ResumeMeta" as ResumeMeta {
-  original_filename : string?
-  mime_type : string?
-  parser_version : string
-  parse_status : processing|completed|failed
-  parse_error : string?
-  warnings[] : string
-  fallback_used : bool
-  ocr_used : bool
-  partial_parse : bool
-  layout_detected : string?
-  extraction_method : string?
+entity "Технічні метадані" as TechnicalMetadata {
+  Стан парсингу
+  Попередження валідації
+  Характеристики витягання
+  Характеристики макета
+  Ознаки fallback-обробки
 }
 
-entity "ContactInfo" as ContactInfo {
-  full_name : string?
-  email : string?
-  phone : string?
-  location : string?
-  linkedin : string?
-  github : string?
-  website : string?
-  raw_text : string?
+entity "Контактна інформація" as ContactInformation {
+  Ідентифікаційні дані
+  Канали зв'язку
+  Посилання на публічні профілі
 }
 
-entity "SummarySection" as SummarySection {
-  raw_text : string?
+entity "Запис про досвід" as ExperienceRecord {
+  Відомості про роботодавця
+  Опис ролі
+  Інтервал дат
+  Місце роботи
+  Пункти досягнень
 }
 
-entity "ExperienceEntry" as ExperienceEntry {
-  title : string?
-  company : string?
-  start_date : string?
-  end_date : string?
-  date_range_raw : string?
-  location : string?
-  bullets[] : string
-  description_raw : string?
-  raw_text : string?
+entity "Запис про освіту" as EducationRecord {
+  Відомості про заклад
+  Дані про кваліфікацію
+  Інтервал дат
+  Локація
+  Додаткова примітка
 }
 
-entity "EducationEntry" as EducationEntry {
-  institution : string?
-  degree : string?
-  field : string?
-  start_date : string?
-  end_date : string?
-  date_range_raw : string?
-  location : string?
-  raw_text : string?
+entity "Група навичок" as SkillGroup {
+  Назва категорії
+  Елементи навичок
 }
 
-entity "GenericListSection" as GenericListSection {
-  items[] : string
-  raw_text : string?
+entity "Запис про сертифікат" as CertificateRecord {
+  Назва сертифіката
+  Організація-видавець
+  Дата отримання
 }
 
-resumes ||--|| ResumeContent : stores in content JSONB
-ResumeContent ||--|| ResumeMeta
-ResumeContent ||--|| ContactInfo
-ResumeContent ||--|| SummarySection
-ResumeContent ||--o{ ExperienceEntry
-ResumeContent ||--o{ EducationEntry
-ResumeContent ||--|| GenericListSection : skills
-ResumeContent ||--|| GenericListSection : certifications
-ResumeContent ||--|| GenericListSection : languages
-ResumeContent ||--|| GenericListSection : projects
+entity "Запис про мову" as LanguageRecord {
+  Назва мови
+  Рівень володіння
+}
+
+entity "Запис про проєкт" as ProjectRecord {
+  Назва проєкту
+  Короткий опис
+  Довідкове посилання
+}
+
+ParsedDocument ||--|| StructuredResumeContent : зберігає
+StructuredResumeContent ||--|| TechnicalMetadata
+StructuredResumeContent ||--|| ContactInformation
+StructuredResumeContent ||--o{ ExperienceRecord
+StructuredResumeContent ||--o{ EducationRecord
+StructuredResumeContent ||--o{ SkillGroup
+StructuredResumeContent ||--o{ CertificateRecord
+StructuredResumeContent ||--o{ LanguageRecord
+StructuredResumeContent ||--o{ ProjectRecord
 
 @enduml

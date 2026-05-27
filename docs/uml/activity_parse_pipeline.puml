@@ -1,42 +1,39 @@
 @startuml
-title Resume Parser Service - Activity Diagram For Parse Pipeline
+title UML-діаграма активності пайплайна парсингу резюме
 
 start
 
-:Receive resume parsing request;
-:Validate gateway user header\nand uploaded file;
+:Отримати запит на парсинг резюме;
+:Перевірити trusted header від gateway\nта завантажений файл;
 
-if (Request valid?) then (yes)
-else (no)
-  :Return validation error;
-  stop
-endif
+if (Запит коректний?) then (так)
+  :Вибрати extractor за типом файлу;
 
-:Choose extractor by file type;
+  if (Формат файлу?) then (PDF)
+    :Витягти текстові блоки з PDF;
+  else (DOCX)
+    :Витягти текстові блоки з DOCX;
+  endif
 
-if (PDF?) then (yes)
-  :Extract text blocks from PDF;
-else (DOCX)
-  :Extract text blocks from DOCX;
-endif
+  :Попередньо обробити та перевпорядкувати текстові блоки;
+  :Визначити заголовки секцій і їх межі;
+  repeat
+    :Розпарсити секції резюме;
+    :Перевірити відсутні або ненадійні поля;
+  backward :Застосувати fallback-обробку;
+  repeat while (Потрібен fallback?) is (так) not (ні)
 
-:Preprocess and reorder text blocks;
-:Detect section headers and boundaries;
-:Parse resume sections;
-:Check missing or unreliable fields;
+  :Виконати перевірки якості парсингу;
 
-if (Fallback needed?) then (yes)
-  :Apply fallback extraction;
-else (no)
-endif
-
-:Run parsing quality checks;
-
-if (Critical parsing error?) then (yes)
-  :Save error state\nand return partial result or error;
-else (no)
-  :Save structured resume data;
-  :Return parsing result;
+  if (Критична помилка парсингу?) then (так)
+    :Зберегти стан помилки;
+    :Повернути частковий результат або помилку;
+  else (ні)
+    :Зберегти структуровані дані резюме;
+    :Повернути результат парсингу;
+  endif
+else (ні)
+  :Повернути помилку валідації;
 endif
 
 stop
